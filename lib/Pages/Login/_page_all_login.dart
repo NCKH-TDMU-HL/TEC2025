@@ -9,14 +9,16 @@ class AllLoginPage extends StatelessWidget {
   const AllLoginPage({super.key, required this.onLoginSuccess});
 
   void _loginWithGoogle(BuildContext context) {
+    onLoginSuccess();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Đăng nhập bằng Google")),
+      const SnackBar(content: Text("Đăng nhập bằng Google thành công")),
     );
   }
 
   void _loginWithApple(BuildContext context) {
+    onLoginSuccess();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Đăng nhập bằng Apple")),
+      const SnackBar(content: Text("Đăng nhập bằng Apple thành công")),
     );
   }
 
@@ -38,11 +40,12 @@ class AllLoginPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Đăng nhập")),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            const SizedBox(height: 40),
             const Text(
               "Chào mừng bạn!",
               style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
@@ -50,38 +53,22 @@ class AllLoginPage extends StatelessWidget {
             const SizedBox(height: 40),
 
             // Google login
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => _loginWithGoogle(context),
-                icon: SvgPicture.asset(
-                  'lib/assets/icon_google.svg',
-                  width: 35,
-                  height: 35,
-                ),
-                label: const Text("Đăng nhập bằng Google"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 5),
-                ),
-              ),
+            _SocialButton(
+              text: "Đăng nhập bằng Google",
+              icon: SvgPicture.asset('lib/assets/icon_google.svg'),
+              backgroundColor: Colors.white,
+              textColor: Colors.black,
+              onPressed: () => _loginWithGoogle(context),
             ),
             const SizedBox(height: 15),
 
             // Apple login
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => _loginWithApple(context),
-                icon: const Icon(Icons.apple, size: 35),
-                label: const Text("Đăng nhập bằng Apple"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 5),
-                ),
-              ),
+            _SocialButton(
+              text: "Đăng nhập bằng Apple",
+              icon: const Icon(Icons.apple, size: 28, color: Colors.white),
+              backgroundColor: Colors.black,
+              textColor: Colors.white,
+              onPressed: () => _loginWithApple(context),
             ),
             const SizedBox(height: 20),
 
@@ -97,30 +84,23 @@ class AllLoginPage extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // Mở LoginPage
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => LoginPage(
-                        onLoginSuccess: onLoginSuccess,
-                      ),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text("Đăng nhập bằng tài khoản"),
-              ),
+            // Login bằng tài khoản
+            _MainButton(
+              text: "Đăng nhập bằng tài khoản",
+              backgroundColor: Colors.blue,
+              textColor: Colors.white,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => LoginPage(onLoginSuccess: onLoginSuccess),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 15),
 
+            // Quên mật khẩu + Đăng ký
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -128,19 +108,105 @@ class AllLoginPage extends StatelessWidget {
                   onPressed: () => _forgotPassword(context),
                   child: const Text(
                     "Quên mật khẩu?",
-                    style: TextStyle(color: Colors.blue),
+                    style: TextStyle(fontSize: 16, color: Colors.blue),
                   ),
                 ),
                 TextButton(
                   onPressed: () => _register(context),
                   child: const Text(
                     "Đăng ký",
-                    style: TextStyle(color: Colors.green),
+                    style: TextStyle(fontSize: 16, color: Colors.green),
                   ),
                 ),
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SocialButton extends StatelessWidget {
+  final String text;
+  final Widget icon;
+  final Color backgroundColor;
+  final Color textColor;
+  final VoidCallback onPressed;
+
+  const _SocialButton({
+    required this.text,
+    required this.icon,
+    required this.backgroundColor,
+    required this.textColor,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 55, // Chiều cao đồng bộ
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: SizedBox(
+          width: 30,
+          height: 30,
+          child: Center(child: icon),
+        ),
+        label: Text(
+          text,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: textColor,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: backgroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 15),
+        ),
+      ),
+    );
+  }
+}
+
+class _MainButton extends StatelessWidget {
+  final String text;
+  final Color backgroundColor;
+  final Color textColor;
+  final VoidCallback onPressed;
+
+  const _MainButton({
+    required this.text,
+    required this.backgroundColor,
+    required this.textColor,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 55, // Đồng bộ với SocialButton
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: backgroundColor,
+          foregroundColor: textColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
     );
