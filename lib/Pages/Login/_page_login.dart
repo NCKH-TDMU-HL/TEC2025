@@ -1,5 +1,9 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
+// import 'package:firebase_auth/firebase_auth.dart'; // Đã xóa Firebase import
 import '_page_changepass.dart';
+import '../../widgets/textfied.dart';
 
 class LoginPage extends StatefulWidget {
   final VoidCallback onLoginSuccess;
@@ -10,17 +14,53 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final TextEditingController _userController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passController = TextEditingController();
+  bool _isLoading = false;
 
-  void _login() {
-    if (_userController.text == "admin" && _passController.text == "123456") {
-      widget.onLoginSuccess();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Sai tài khoản hoặc mật khẩu")),
-      );
+  // Đăng nhập demo/local (mở rộng được)
+  Future<void> _login() async {
+    if (_emailController.text.isEmpty || _passController.text.isEmpty) {
+      _showSnackBar("Vui lòng nhập đầy đủ email và mật khẩu");
+      return;
     }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    // Simulate loading time
+    await Future.delayed(const Duration(seconds: 1));
+
+    try {
+      // Demo login logic - có thể mở rộng thêm nhiều tài khoản
+      if (_emailController.text.trim().toLowerCase() == "admin@test.com" && _passController.text == "123456" ||
+          _emailController.text.trim() == "admin" && _passController.text == "123456") {
+        
+        _showSnackBar("Đăng nhập thành công! Chào mừng ${_emailController.text}");
+        widget.onLoginSuccess();
+        Navigator.pop(context);
+        
+      } else {
+        _showSnackBar("Email hoặc mật khẩu không chính xác");
+      }
+      
+    } catch (e) {
+      _showSnackBar('Có lỗi xảy ra: ${e.toString()}');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: message.contains("thành công") ? Colors.green : Colors.red,
+      ),
+    );
   }
 
   void _forgotPassword(BuildContext context) {
@@ -33,7 +73,11 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Đăng nhập")),
+      appBar: AppBar(
+        title: const Text("Đăng nhập"),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -45,59 +89,25 @@ class _LoginPageState extends State<LoginPage> {
             ),
             const SizedBox(height: 80),
 
-            TextField(
-              controller: _userController,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.blue, width: 2),
-                ),
-                //viền khi foucus
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.blue, width: 2),
-                ),
-
-                //chữ khi focus
-                labelText: "Tài khoản",
-                labelStyle: TextStyle(color: Colors.grey),
-                floatingLabelStyle: TextStyle(
-                  color: Colors.blue,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-                prefixIcon: Icon(Icons.person),
-              ),
+            // Email/Username
+            CustomTextField(
+              controller: _emailController,
+              labelText: "Email hoặc Tên đăng nhập",
+              prefixIcon: Icons.person,
+              keyboardType: TextInputType.emailAddress,
             ),
-
             const SizedBox(height: 25),
-            TextField(
-              controller: _passController,
-              decoration: InputDecoration(
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.blue, width: 2),
-                ),
-                // Viền khi focus
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.blue, width: 2),
-                ),
 
-                //chữ khi focus
-                labelText: "Mật Khẩu",
-                labelStyle: TextStyle(color: Colors.grey),
-                floatingLabelStyle: TextStyle(
-                  color: Colors.blue,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-                prefixIcon: Icon(Icons.lock),
-              ),
+            // Mật Khẩu
+            CustomTextField(
+              controller: _passController,
+              labelText: "Mật Khẩu",
+              prefixIcon: Icons.lock,
+              obscureText: true,
             ),
             const SizedBox(height: 10),
 
-            //Đăng nhập & ChanglePass
+            // Quên mật khẩu
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -110,36 +120,43 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ],
             ),
+            
             const SizedBox(height: 40),
-            //Đăng Nhập
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                //Button Đăng Nhập
-                ElevatedButton(
-                  onPressed: _login,
 
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 50,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(50),
-                    ),
-                  ),
-                  child: const Text(
-                    "Đăng nhập",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
+            // Button đăng nhập
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _login,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-              ],
+                child: _isLoading 
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text(
+                        "Đăng Nhập",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+              ),
             ),
+            
+            const SizedBox(height: 20),
+            
           ],
         ),
       ),
