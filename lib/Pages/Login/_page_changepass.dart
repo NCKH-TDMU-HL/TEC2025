@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../widgets/textfied.dart';
+import '../Login/_page_register.dart';
 
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
@@ -9,75 +11,127 @@ class ChangePasswordPage extends StatefulWidget {
 
 class _ChangePasswordPageState extends State<ChangePasswordPage> {
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _codeController = TextEditingController();
-  final TextEditingController _newPassController = TextEditingController();
-  final TextEditingController _confirmPassController = TextEditingController();
-  
-  int _currentStep = 0; 
+  final TextEditingController _newPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+  bool _isLoading = false;
+  bool _emailFound = false;
+  bool _showPasswordFields = false;
 
-  void _sendCode() {
+  void _checkEmail() {
     if (_emailController.text.isEmpty) {
-      _showSnackBar("Vui lòng nhập email");
+      _showSnackBar("Vui lòng nhập email", isError: true);
       return;
     }
-    
-    _showSnackBar("Mã xác thực đã được gửi tới email của bạn");
-    setState(() {
-      _currentStep = 1;
-    });
-  }
 
-  void _verifyCode() {
-    if (_codeController.text.isEmpty) {
-      _showSnackBar("Vui lòng nhập mã xác thực");
-      return;
-    }
-    
-    if (_codeController.text != "123456") {
-      _showSnackBar("Mã xác thực không đúng");
-      return;
-    }
-    
     setState(() {
-      _currentStep = 2;
+      _isLoading = true;
+    });
+
+    Future.delayed(const Duration(seconds: 1), () {
+      if (!mounted) return;
+      
+      final emailToCheck = _emailController.text.trim().toLowerCase();
+      
+      bool foundUser = false;
+      
+      // Check demo admin
+      if (!foundUser) {
+        if (emailToCheck == "admin@test.com" || emailToCheck == "admin") {
+          foundUser = true;
+        }
+      }
+
+      if (foundUser) {
+        setState(() {
+          _emailFound = true;
+          _showPasswordFields = true;
+        });
+        _showSnackBar("Email tìm thấy! Nhập mật khẩu mới bên dưới", isError: false);
+      } else {
+        _showSnackBar("Không tìm thấy tài khoản với email này", isError: true);
+      }
+
+      setState(() {
+        _isLoading = false;
+      });
     });
   }
 
   void _changePassword() {
-    if (_newPassController.text.isEmpty) {
-      _showSnackBar("Vui lòng nhập mật khẩu mới");
+    if (_newPasswordController.text.isEmpty || _confirmPasswordController.text.isEmpty) {
+      _showSnackBar("Vui lòng nhập đầy đủ mật khẩu mới", isError: true);
       return;
     }
 
-    if (_newPassController.text.length < 6) {
-      _showSnackBar("Mật khẩu phải có ít nhất 6 ký tự");
+    if (_newPasswordController.text.length < 6) {
+      _showSnackBar("Mật khẩu phải có ít nhất 6 ký tự", isError: true);
       return;
     }
 
-    if (_newPassController.text != _confirmPassController.text) {
-      _showSnackBar("Mật khẩu xác nhận không khớp");
+    if (_newPasswordController.text != _confirmPasswordController.text) {
+      _showSnackBar("Mật khẩu xác nhận không khớp", isError: true);
       return;
     }
 
-    _showSnackBar("Đổi mật khẩu thành công!");
-    
-    Navigator.pop(context);
+    setState(() {
+      _isLoading = true;
+    });
+
+    Future.delayed(const Duration(seconds: 2), () {
+      if (!mounted) return;
+      
+      setState(() {
+        _isLoading = false;
+      });
+      
+      _showSuccessDialog();
+    });
   }
 
-  void _showSnackBar(String message) {
+  void _showSnackBar(String message, {required bool isError}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
-  void _resendCode() {
-    _showSnackBar("Mã xác thực mới đã được gửi");
-  }
-
-  void _backToStep(int step) {
-    setState(() {
-      _currentStep = step;
-    });
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Mật khẩu đã được thay đổi"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text("Mật khẩu của bạn đã được cập nhật thành công!"),
+              const SizedBox(height: 12),
+              Text(
+                "Email: ${_emailController.text}",
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              const Text("Bạn có thể đăng nhập với mật khẩu mới."),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).pop();
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -85,236 +139,154 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Đổi mật khẩu"),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
+        backgroundColor: Colors.orange,
+        foregroundColor: Colors.white,
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Progress indicator
-            Row(
-              children: [
-                _buildStepIndicator(0, "Email"),
-                _buildStepLine(0),
-                _buildStepIndicator(1, "Mã"),
-                _buildStepLine(1),
-                _buildStepIndicator(2, "Mật khẩu"),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Đổi mật khẩu",
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                "Nhập email để xác nhận tài khoản và đặt mật khẩu mới",
+                style: TextStyle(color: Colors.grey, fontSize: 16),
+              ),
+              const SizedBox(height: 40),
+
+              CustomTextField(
+                controller: _emailController,
+                labelText: 'Email',
+                prefixIcon: Icons.email,
+                keyboardType: TextInputType.emailAddress,
+              ),
+
+              const SizedBox(height: 20),
+              
+              if (!_emailFound)
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _checkEmail,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text("Kiểm tra email", style: TextStyle(fontSize: 16)),
+                  ),
+                ),
+
+              if (_showPasswordFields) ...[
+                const SizedBox(height: 30),
+                
+                CustomTextField(
+                  controller: _newPasswordController,
+                  labelText: 'Mật khẩu mới',
+                  prefixIcon: Icons.lock,
+                  obscureText: true,
+                ),
+                
+                const SizedBox(height: 20),
+                
+                CustomTextField(
+                  controller: _confirmPasswordController,
+                  labelText: 'Xác nhận mật khẩu mới',
+                  prefixIcon: Icons.lock_outline,
+                  obscureText: true,
+                ),
+                
+                const SizedBox(height: 30),
+                
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _changePassword,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
+                          )
+                        : const Text("Đổi mật khẩu", style: TextStyle(fontSize: 16)),
+                  ),
+                ),
               ],
-            ),
-            const SizedBox(height: 40),
-
-            // Step content
-            Expanded(
-              child: _buildStepContent(),
-            ),
-          ],
+              
+              const SizedBox(height: 30),
+              
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.blue),
+                        SizedBox(width: 12),
+                        Text(
+                          "Hướng dẫn:",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    Text("1. Nhập email để kiểm tra tài khoản"),
+                    Text("2. Nhập mật khẩu mới (ít nhất 6 ký tự)"),
+                    Text("3. Xác nhận mật khẩu mới"),
+                    SizedBox(height: 12),
+                    Text(
+                      "Demo accounts:",
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    ),
+                    Text(
+                      "• admin@test.com hoặc admin",
+                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                    Text(
+                      "• Hoặc bất kỳ email nào đã đăng ký",
+                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    );
-  }
-
-  Widget _buildStepIndicator(int step, String label) {
-    bool isActive = step <= _currentStep;
-    return Column(
-      children: [
-        Container(
-          width: 30,
-          height: 30,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: isActive ? Colors.blue : Colors.grey[300],
-          ),
-          child: Icon(
-            step == 0 ? Icons.email :
-            step == 1 ? Icons.verified_user :
-            Icons.lock,
-            color: isActive ? Colors.white : Colors.grey,
-            size: 16,
-          ),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          label,
-          style: TextStyle(
-            color: isActive ? Colors.blue : Colors.grey,
-            fontSize: 12,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStepLine(int step) {
-    bool isActive = step < _currentStep;
-    return Expanded(
-      child: Container(
-        height: 2,
-        margin: const EdgeInsets.only(top: 15),
-        color: isActive ? Colors.blue : Colors.grey[300],
-      ),
-    );
-  }
-
-  Widget _buildStepContent() {
-    switch (_currentStep) {
-      case 0:
-        return _buildEmailStep();
-      case 1:
-        return _buildCodeStep();
-      case 2:
-        return _buildPasswordStep();
-      default:
-        return Container();
-    }
-  }
-
-  Widget _buildEmailStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Nhập email của bạn",
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 10),
-        const Text(
-          "Chúng tôi sẽ gửi mã xác thực tới email này",
-          style: TextStyle(color: Colors.grey),
-        ),
-        const SizedBox(height: 30),
-        TextField(
-          controller: _emailController,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            labelText: "Email",
-            prefixIcon: Icon(Icons.email),
-          ),
-          keyboardType: TextInputType.emailAddress,
-        ),
-        const SizedBox(height: 30),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _sendCode,
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 15),
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text("Gửi mã", style: TextStyle(fontSize: 16)),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCodeStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Nhập mã xác thực",
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 10),
-        Text(
-          "Mã xác thực đã được gửi tới ${_emailController.text}",
-          style: const TextStyle(color: Colors.grey),
-        ),
-        const SizedBox(height: 30),
-        TextField(
-          controller: _codeController,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            labelText: "Mã xác thực",
-            prefixIcon: Icon(Icons.verified_user),
-          ),
-          keyboardType: TextInputType.number,
-          maxLength: 6,
-        ),
-        const SizedBox(height: 20),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            TextButton(
-              onPressed: () => _backToStep(0),
-              child: const Text("Thay đổi email"),
-            ),
-            TextButton(
-              onPressed: _resendCode,
-              child: const Text("Gửi lại mã"),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _verifyCode,
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 15),
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text("Xác thực", style: TextStyle(fontSize: 16)),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPasswordStep() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Tạo mật khẩu mới",
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 10),
-        const Text(
-          "Vui lòng tạo mật khẩu mới có ít nhất 6 ký tự",
-          style: TextStyle(color: Colors.grey),
-        ),
-        const SizedBox(height: 30),
-        TextField(
-          controller: _newPassController,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            labelText: "Mật khẩu mới",
-            prefixIcon: Icon(Icons.lock),
-          ),
-          obscureText: true,
-        ),
-        const SizedBox(height: 15),
-        TextField(
-          controller: _confirmPassController,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            labelText: "Xác nhận mật khẩu",
-            prefixIcon: Icon(Icons.lock_outline),
-          ),
-          obscureText: true,
-        ),
-        const SizedBox(height: 30),
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _changePassword,
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 15),
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text("Đổi mật khẩu", style: TextStyle(fontSize: 16)),
-          ),
-        ),
-      ],
     );
   }
 }

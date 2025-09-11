@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
+// import 'package:firebase_core/firebase_core.dart'; // Đã xóa Firebase import
 import './Pages/Login/_page_all_login.dart';
-import 'pages/home/_page_home.dart';
+import './Pages/home/_page_home.dart';
+import 'Pages/menu/_page_menu.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // await Firebase.initializeApp(); // Đã xóa Firebase initialization
+  
   runApp(const MyApp());
 }
 
@@ -33,7 +39,14 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'My App',
-      theme: ThemeData(primarySwatch: Colors.blue),
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        textSelectionTheme: const TextSelectionThemeData(
+          cursorColor: Colors.blue,
+          selectionColor: Colors.blueAccent, 
+          selectionHandleColor: Colors.blue,
+        ),
+      ),
       home: _isLoggedIn
           ? MainScreen(onLogout: _onLogout)
           : AllLoginPage(onLoginSuccess: _onLoginSuccess),
@@ -61,12 +74,7 @@ class MainScreenState extends State<MainScreen> {
       const Center(child: Text('Ví điện tử', style: TextStyle(fontSize: 24))),
       const HomePageContent(),
       const Center(child: Text('Thông báo', style: TextStyle(fontSize: 24))),
-      Center(
-        child: ElevatedButton(
-          onPressed: widget.onLogout,
-          child: const Text("Đăng xuất"),
-        ),
-      ),
+      const MenuPage(),
     ];
   }
 
@@ -75,7 +83,9 @@ class MainScreenState extends State<MainScreen> {
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: isSelected ? const Color.fromARGB(255, 45, 126, 248) : Colors.transparent,
+        color: isSelected
+            ? const Color.fromARGB(255, 45, 126, 248)
+            : Colors.transparent,
       ),
       child: Icon(
         icon,
@@ -90,9 +100,7 @@ class MainScreenState extends State<MainScreen> {
     return Scaffold(
       body: _pages[_currentIndex],
       bottomNavigationBar: Theme(
-        data: Theme.of(context).copyWith(
-          splashFactory: NoSplash.splashFactory,  
-        ),
+        data: Theme.of(context).copyWith(splashFactory: NoSplash.splashFactory),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
           onTap: (index) => setState(() => _currentIndex = index),
@@ -118,7 +126,10 @@ class MainScreenState extends State<MainScreen> {
               label: 'Lịch sử',
             ),
             BottomNavigationBarItem(
-              icon: _buildIcon(Icons.account_balance_wallet, _currentIndex == 1),
+              icon: _buildIcon(
+                Icons.account_balance_wallet,
+                _currentIndex == 1,
+              ),
               label: 'Ví điện tử',
             ),
             BottomNavigationBarItem(
