@@ -1,25 +1,75 @@
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '_page_register.dart';
 import '_page_changepass.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '_page_login.dart';
 
-class AllLoginPage extends StatelessWidget {
+class AllLoginPage extends StatefulWidget {
   final VoidCallback onLoginSuccess;
   const AllLoginPage({super.key, required this.onLoginSuccess});
 
-  void _loginWithGoogle(BuildContext context) {
-    onLoginSuccess();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Đăng nhập bằng Google thành công")),
-    );
-  }
+  @override
+  State<AllLoginPage> createState() => _AllLoginPageState();
+}
 
-  void _loginWithApple(BuildContext context) {
-    onLoginSuccess();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Đăng nhập bằng Apple thành công")),
-    );
+class _AllLoginPageState extends State<AllLoginPage> {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  bool _isLoading = false;
+
+  // Đăng nhập với Google
+  Future<void> _loginWithGoogle(BuildContext context) async {
+    if (_isLoading) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final userCredential = await _auth.signInWithCredential(credential);
+
+      if (userCredential.user != null) {
+        widget.onLoginSuccess();
+        if (mounted) {
+          // ignore: use_build_context_synchronously
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                "Chào mừng ${userCredential.user!.displayName ?? 'bạn'}!",
+              ),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Đăng nhập Google thất bại: ${e.toString()}"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   void _register(BuildContext context) {
@@ -58,19 +108,10 @@ class AllLoginPage extends StatelessWidget {
               icon: SvgPicture.asset('lib/assets/icon_google.svg'),
               backgroundColor: Colors.white,
               textColor: Colors.black,
-              onPressed: () => _loginWithGoogle(context),
+              onPressed: _isLoading ? null : () => _loginWithGoogle(context),
+              isLoading: _isLoading,
             ),
             const SizedBox(height: 15),
-
-            // Apple login
-            _SocialButton(
-              text: "Đăng nhập bằng Apple",
-              icon: const Icon(Icons.apple, size: 28, color: Colors.white),
-              backgroundColor: Colors.black,
-              textColor: Colors.white,
-              onPressed: () => _loginWithApple(context),
-            ),
-            const SizedBox(height: 20),
 
             const Row(
               children: [
@@ -89,14 +130,17 @@ class AllLoginPage extends StatelessWidget {
               text: "Đăng nhập bằng tài khoản",
               backgroundColor: Colors.blue,
               textColor: Colors.white,
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => LoginPage(onLoginSuccess: onLoginSuccess),
-                  ),
-                );
-              },
+              onPressed: _isLoading
+                  ? null
+                  : () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              LoginPage(onLoginSuccess: widget.onLoginSuccess),
+                        ),
+                      );
+                    },
             ),
             const SizedBox(height: 15),
 
@@ -105,14 +149,14 @@ class AllLoginPage extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 TextButton(
-                  onPressed: () => _forgotPassword(context),
+                  onPressed: _isLoading ? null : () => _forgotPassword(context),
                   child: const Text(
                     "Quên mật khẩu?",
                     style: TextStyle(fontSize: 16, color: Colors.blue),
                   ),
                 ),
                 TextButton(
-                  onPressed: () => _register(context),
+                  onPressed: _isLoading ? null : () => _register(context),
                   child: const Text(
                     "Đăng ký",
                     style: TextStyle(fontSize: 16, color: Colors.green),
@@ -120,6 +164,12 @@ class AllLoginPage extends StatelessWidget {
                 ),
               ],
             ),
+
+            if (_isLoading)
+              const Padding(
+                padding: EdgeInsets.only(top: 20),
+                child: CircularProgressIndicator(),
+              ),
           ],
         ),
       ),
@@ -132,7 +182,8 @@ class _SocialButton extends StatelessWidget {
   final Widget icon;
   final Color backgroundColor;
   final Color textColor;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
+  final bool isLoading;
 
   const _SocialButton({
     required this.text,
@@ -140,19 +191,31 @@ class _SocialButton extends StatelessWidget {
     required this.backgroundColor,
     required this.textColor,
     required this.onPressed,
+    this.isLoading = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 55, // Chiều cao đồng bộ
+      height: 55,
       child: ElevatedButton.icon(
         onPressed: onPressed,
         icon: SizedBox(
           width: 30,
           height: 30,
-          child: Center(child: icon),
+          child: Center(
+            child: isLoading
+                ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(textColor),
+                    ),
+                  )
+                : icon,
+          ),
         ),
         label: Text(
           text,
@@ -166,8 +229,12 @@ class _SocialButton extends StatelessWidget {
           backgroundColor: backgroundColor,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
+            side: backgroundColor == Colors.white
+                ? const BorderSide(color: Colors.grey, width: 1)
+                : BorderSide.none,
           ),
           padding: const EdgeInsets.symmetric(horizontal: 15),
+          elevation: backgroundColor == Colors.white ? 1 : 2,
         ),
       ),
     );
@@ -178,7 +245,7 @@ class _MainButton extends StatelessWidget {
   final String text;
   final Color backgroundColor;
   final Color textColor;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   const _MainButton({
     required this.text,
@@ -191,7 +258,7 @@ class _MainButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 55, // Đồng bộ với SocialButton
+      height: 55,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
@@ -203,10 +270,7 @@ class _MainButton extends StatelessWidget {
         ),
         child: Text(
           text,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
       ),
     );
