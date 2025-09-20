@@ -1,38 +1,22 @@
 import 'package:flutter/material.dart';
-// import 'package:firebase_core/firebase_core.dart'; // Đã xóa Firebase import
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+import 'firebase_options.dart';
 import './Pages/Login/_page_all_login.dart';
 import './Pages/home/_page_home.dart';
 import 'Pages/menu/_page_menu.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // await Firebase.initializeApp(); // Đã xóa Firebase initialization
-  
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  bool _isLoggedIn = false;
-
-  void _onLoginSuccess() {
-    setState(() {
-      _isLoggedIn = true;
-    });
-  }
-
-  void _onLogout() {
-    setState(() {
-      _isLoggedIn = false;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,13 +27,33 @@ class _MyAppState extends State<MyApp> {
         primarySwatch: Colors.blue,
         textSelectionTheme: const TextSelectionThemeData(
           cursorColor: Colors.blue,
-          selectionColor: Colors.blueAccent, 
+          selectionColor: Colors.blueAccent,
           selectionHandleColor: Colors.blue,
         ),
       ),
-      home: _isLoggedIn
-          ? MainScreen(onLogout: _onLogout)
-          : AllLoginPage(onLoginSuccess: _onLoginSuccess),
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (snapshot.hasData) {
+            // Đã đăng nhập
+            return MainScreen(
+              onLogout: () async {
+                await FirebaseAuth.instance.signOut();
+              },
+            );
+          } else {
+            // Chưa đăng nhập
+            return AllLoginPage(
+              onLoginSuccess: () {}, // giữ cho code cũ không lỗi
+            );
+          }
+        },
+      ),
     );
   }
 }
@@ -109,17 +113,14 @@ class MainScreenState extends State<MainScreen> {
           unselectedItemColor: Colors.grey,
           backgroundColor: Colors.white,
           enableFeedback: true,
-
           selectedLabelStyle: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 12,
           ),
-
           unselectedLabelStyle: const TextStyle(
             fontWeight: FontWeight.normal,
             fontSize: 11,
           ),
-
           items: [
             BottomNavigationBarItem(
               icon: _buildIcon(Icons.history, _currentIndex == 0),
@@ -150,3 +151,4 @@ class MainScreenState extends State<MainScreen> {
     );
   }
 }
+

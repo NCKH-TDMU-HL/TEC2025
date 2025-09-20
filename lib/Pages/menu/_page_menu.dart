@@ -1,9 +1,66 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../navigation/profile_info_page.dart';
 
 class MenuPage extends StatelessWidget {
   final VoidCallback? onLogout;
   
   const MenuPage({super.key, this.onLogout});
+
+  // Lấy thông tin user từ Firebase
+  User? get currentUser => FirebaseAuth.instance.currentUser;
+
+  // Lấy tên hiển thị
+  String get displayName {
+    if (currentUser?.displayName != null && currentUser!.displayName!.isNotEmpty) {
+      return currentUser!.displayName!;
+    }
+    // Nếu đăng nhập bằng email, lấy phần trước @
+    if (currentUser?.email != null) {
+      return currentUser!.email!.split('@')[0];
+    }
+    // Nếu đăng nhập bằng SĐT, hiển thị số điện thoại luôn
+    if (currentUser?.phoneNumber != null) {
+      return currentUser!.phoneNumber!; // Hiển thị số điện thoại trực tiếp
+    }
+    return "Người dùng";
+  }
+
+  // Lấy thông tin đăng nhập - Hiển thị email nếu đăng nhập bằng Google/Email, SĐT nếu đăng nhập bằng phone
+  String get loginInfo {
+    // Ưu tiên hiển thị email nếu có (Google/Email login)
+    if (currentUser?.email != null && currentUser!.email!.isNotEmpty) {
+      return currentUser!.email!;
+    }
+    // Nếu không có email, hiển thị số điện thoại (Phone login)
+    if (currentUser?.phoneNumber != null && currentUser!.phoneNumber!.isNotEmpty) {
+      return currentUser!.phoneNumber!;
+    }
+    return "Chưa cập nhật";
+  }
+
+  // Xác định loại đăng nhập
+  String get loginType {
+    // Kiểm tra Google login (thường có email)
+    if (currentUser?.email != null && currentUser!.email!.isNotEmpty) {
+      // Kiểm tra xem có phải Google account không
+      bool isGoogleAccount = currentUser!.providerData
+          .any((provider) => provider.providerId == 'google.com');
+      
+      if (isGoogleAccount) {
+        return "Google";
+      } else {
+        return "Email";
+      }
+    }
+    
+    // Phone number login
+    if (currentUser?.phoneNumber != null && currentUser!.phoneNumber!.isNotEmpty) {
+      return "Số điện thoại";
+    }
+    
+    return "Khách";
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -12,34 +69,71 @@ class MenuPage extends StatelessWidget {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // Phần 1
+              // Phần 1 - User Info
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   children: [
+                    // Avatar với ảnh thực từ Google hoặc icon mặc định
                     Container(
                       width: 100,
                       height: 100,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.blue[100],
+                        color: Colors.blue.withValues(alpha: 0.1),
                         border: Border.all(color: Colors.blue, width: 3),
                       ),
-                      child: Icon(
-                        Icons.person,
-                        size: 60,
-                        color: Colors.blue[700],
+                      child: ClipOval(
+                        child: currentUser?.photoURL != null
+                            ? Image.network(
+                                currentUser!.photoURL!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  // Fallback nếu không load được ảnh
+                                  return Icon(
+                                    Icons.person,
+                                    size: 60,
+                                    color: Colors.blue[700],
+                                  );
+                                },
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Center(
+                                    child: CircularProgressIndicator(
+                                      value: loadingProgress.expectedTotalBytes != null
+                                          ? loadingProgress.cumulativeBytesLoaded /
+                                              (loadingProgress.expectedTotalBytes ?? 1)
+                                          : null,
+                                    ),
+                                  );
+                                },
+                              )
+                            : Icon(
+                                Icons.person,
+                                size: 60,
+                                color: Colors.blue[700],
+                              ),
                       ),
                     ),
                     const SizedBox(height: 16),
                     
-                    const Text(
-                      'Nguyễn Văn A',
-                      style: TextStyle(
+                    Text(
+                      displayName,
+                      style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    
+                    // Hiển thị thông tin đăng nhập
+                    Text(
+                      loginInfo,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -47,14 +141,14 @@ class MenuPage extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.green[50],
+                        color: Colors.green.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: Colors.green, width: 1),
                       ),
                       child: Text(
-                        'Người thuê',
+                        loginType, // Chỉ hiển thị loại đăng nhập
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 12,
                           color: Colors.green[700],
                           fontWeight: FontWeight.w500,
                         ),
@@ -71,7 +165,7 @@ class MenuPage extends StatelessWidget {
                 endIndent: 20,
               ),
               
-              // Phần 2
+              // Phần 2 - Settings
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -92,14 +186,21 @@ class MenuPage extends StatelessWidget {
                       title: 'Thông tin cá nhân',
                       subtitle: 'Cập nhật thông tin của bạn',
                       onTap: () {
-                        // Navigate to profile
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ProfileInfoPage(),
+                          ),
+                        );
                       },
                     ),
                     
                     _buildMenuItem(
                       icon: Icons.security,
                       title: 'Bảo mật',
-                      subtitle: 'Đổi mật khẩu, xác thực 2 bước',
+                      subtitle: currentUser?.email != null 
+                          ? 'Đổi mật khẩu, xác thực 2 bước'
+                          : 'Cài đặt bảo mật tài khoản',
                       onTap: () {
                         // Navigate to security
                       },
@@ -151,7 +252,7 @@ class MenuPage extends StatelessWidget {
                 endIndent: 20,
               ),
               
-              // Phần 3
+              // Phần 3 - Support
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -190,7 +291,7 @@ class MenuPage extends StatelessWidget {
                       title: 'Về ứng dụng',
                       subtitle: 'Phiên bản 1.0.0',
                       onTap: () {
-
+                        _showAppInfoDialog(context);
                       },
                     ),
                     
@@ -199,21 +300,20 @@ class MenuPage extends StatelessWidget {
                       title: 'Chính sách bảo mật',
                       subtitle: 'Điều khoản sử dụng và quyền riêng tư',
                       onTap: () {
-
+                        // Navigate to privacy policy
                       },
                     ),
                     
                     const SizedBox(height: 20),
                     
-                    // ignore: sized_box_for_whitespace
-                    Container(
+                    SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
                           _showLogoutDialog(context);
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red[50],
+                          backgroundColor: Colors.red.withValues(alpha: 0.1),
                           foregroundColor: Colors.red[700],
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
@@ -222,12 +322,12 @@ class MenuPage extends StatelessWidget {
                           ),
                           elevation: 0,
                         ),
-                        child: Row(
+                        child: const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.logout, size: 20),
-                            const SizedBox(width: 8),
-                            const Text(
+                            SizedBox(width: 8),
+                            Text(
                               'Đăng xuất',
                               style: TextStyle(
                                 fontSize: 16,
@@ -264,7 +364,7 @@ class MenuPage extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.grey[50],
+            color: Colors.grey.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.grey[200]!),
           ),
@@ -273,7 +373,7 @@ class MenuPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.blue[50],
+                  color: Colors.blue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -336,7 +436,7 @@ class MenuPage extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Đóng dialog
+                Navigator.of(context).pop();
               },
               child: Text(
                 'Hủy',
@@ -344,10 +444,14 @@ class MenuPage extends StatelessWidget {
               ),
             ),
             ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Đóng dialog
+              onPressed: () async {
+                Navigator.of(context).pop();
+                
+                // Đăng xuất khỏi Firebase
+                await FirebaseAuth.instance.signOut();
+                
                 if (onLogout != null) {
-                  onLogout!(); // Gọi hàm logout
+                  onLogout!();
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -358,6 +462,34 @@ class MenuPage extends StatelessWidget {
                 ),
               ),
               child: const Text('Đăng xuất'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showAppInfoDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Về ứng dụng',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: const Text(
+            'Ứng dụng phiên bản 1.0.0\n\nĐây là ứng dụng mẫu sử dụng Flutter và Firebase.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Đóng'),
             ),
           ],
         );
