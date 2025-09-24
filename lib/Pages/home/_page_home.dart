@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../widgets/_buildFunctionIcon.dart';
 import '../../widgets/add_new_dialog.dart';
 import '../../model/function_item.dart';
+import '../../widgets/electric_chart.dart';
+import '../../widgets/water_chart.dart';
 
 class HomePageContent extends StatefulWidget {
   const HomePageContent({super.key});
@@ -221,7 +223,7 @@ class _HomePageContentState extends State<HomePageContent> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -334,6 +336,8 @@ class _HomePageContentState extends State<HomePageContent> {
                 textAlign: TextAlign.center,
               ),
             ),
+            const SizedBox(height: 12),
+            const ElectricChart(),
 
             const SizedBox(height: 20),
             Container(
@@ -353,6 +357,9 @@ class _HomePageContentState extends State<HomePageContent> {
                 textAlign: TextAlign.center,
               ),
             ),
+            const SizedBox(height: 12),
+            const WaterChart(),
+            
           ],
         ),
       ),
