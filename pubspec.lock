@@ -130,29 +130,27 @@ packages:
     source: hosted
     version: "6.0.0"
   firebase_core_web:
-    dependency: transitive
-    description:
-      name: firebase_core_web
-      sha256: f7ee08febc1c4451588ce58ffcf28edaee857e9a196fee88b85deb889990094a
-      url: "https://pub.dev"
+  dependency: transitive
+  description:
+    name: firebase_core_web
+    sha256: f7ee08febc1c4451588ce58ffcf28edaee857e9a196fee88b85deb889990094a
   url: "https://pub.dev"
-    source: hosted
-    version: "3.1.0"
-  fl_chart:
-    dependency: "direct main"
-    description:
-      name: fl_chart
-      sha256: "74959b99b92b9eebeed1a4049426fd67c4abc3c5a0f4d12e2877097d6a11ae08"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.69.2"
-    source: hosted
-    version: "3.1.0"
-  flutter:
-    dependency: "direct main"
-    description: flutter
-    source: sdk
-    version: "0.0.0"
+  source: hosted
+  version: "3.1.0"   # Cập nhật phiên bản cho đồng nhất
+
+fl_chart:
+  dependency: direct main
+  description:
+    name: fl_chart
+    sha256: "74959b99b92b9eebeed1a4049426fd67c4abc3c5a0f4d12e2877797d6a11ae08"
+  url: "https://pub.dev"
+  source: hosted
+  version: "0.69.2"   # Cập nhật phiên bản cho đồng nhất
+
+flutter:
+  dependency: direct main
+  description: flutter
+  version: "3.1.0"
   flutter_lints:
     dependency: "direct dev"
     description:
