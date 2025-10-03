@@ -6,6 +6,8 @@ import 'firebase_options.dart';
 import './Pages/Login/_page_all_login.dart';
 import './Pages/home/_page_home.dart';
 import 'Pages/menu/_page_menu.dart';
+import 'Pages/notifications/notification_page.dart';
+import 'Pages/history/history_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -74,10 +76,10 @@ class MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     _pages = [
-      const Center(child: Text('Lịch sử', style: TextStyle(fontSize: 24))),
+      const HistoryPage(),
       const Center(child: Text('Ví điện tử', style: TextStyle(fontSize: 24))),
       const HomePageContent(),
-      const Center(child: Text('Thông báo', style: TextStyle(fontSize: 24))),
+      const NotificationPage(),
       const MenuPage(),
     ];
   }
