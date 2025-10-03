@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import '../../service/user_service.dart';
 import '_page_register.dart';
 import '_page_changepass.dart';
 import '_page_login.dart';
@@ -17,6 +18,7 @@ class AllLoginPage extends StatefulWidget {
 class _AllLoginPageState extends State<AllLoginPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final UserService _userService = UserService();
   bool _isLoading = false;
 
   // Đăng nhập với Google
@@ -42,8 +44,19 @@ class _AllLoginPageState extends State<AllLoginPage> {
 
       if (userCredential.user != null) {
         widget.onLoginSuccess();
+        await _userService.addHistory(
+          userCredential.user!,
+          "Đăng Ký Tài Khoản Băng Google",
+          "Bạn vừa đăng nhập vào ứng dụng bằng tài khoản Google",
+        );
+
+        await _userService.addNotification(
+          userCredential.user!,
+          "Tạo tài khoản người dùng thành công",
+          "Chào mừng bạn đã tới App Mass điện nước của chúng tôi! Rất mong bạn sẽ có một trảu nghiệm với app một cách trọn vẹn",
+          "google",
+        );
         if (mounted) {
-          // ignore: use_build_context_synchronously
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -168,7 +181,7 @@ class _AllLoginPageState extends State<AllLoginPage> {
             if (_isLoading)
               const Padding(
                 padding: EdgeInsets.only(top: 20),
-                child: CircularProgressIndicator(),
+                child: CircularProgressIndicator(color: Colors.blue),
               ),
           ],
         ),
@@ -211,7 +224,7 @@ class _SocialButton extends StatelessWidget {
                     height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(textColor),
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
                     ),
                   )
                 : icon,
