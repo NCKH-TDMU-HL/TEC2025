@@ -12,6 +12,7 @@ class NotificationPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     final userService = UserService();
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -33,6 +34,7 @@ class NotificationPage extends StatelessWidget {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text("Đã đánh dấu tất cả thông báo là đã đọc"),
+                        duration: Duration(seconds: 2),
                       ),
                     );
                   }
@@ -44,13 +46,18 @@ class NotificationPage extends StatelessWidget {
                 value: 'mark_all',
                 child: Row(
                   children: [
-                    const Icon(Icons.done_all, color: Colors.blue),
-                    const SizedBox(width: 8),
+                    Icon(
+                      Icons.done_all,
+                      color: theme.colorScheme.primary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
                     Text(
                       "Đọc tất cả thông báo",
                       style: TextStyle(
-                        color: Colors.black87,
+                        color: theme.colorScheme.onSurface,
                         fontWeight: FontWeight.w500,
+                        fontSize: 14,
                       ),
                     ),
                   ],
@@ -60,44 +67,105 @@ class NotificationPage extends StatelessWidget {
           ),
         ],
       ),
-
       body: SafeArea(
         child: user == null
-            ? const Center(child: Text("Chưa đăng nhập"))
+            ? Center(
+                child: Text(
+                  "Chưa đăng nhập",
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+              )
             : StreamBuilder<List<Map<String, dynamic>>>(
                 stream: userService.getUserNotifications(user),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: CircularProgressIndicator(color: Colors.blue),
+                    return Center(
+                      child: CircularProgressIndicator(
+                        color: theme.colorScheme.primary,
+                      ),
                     );
                   }
+
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            size: 48,
+                            color: theme.colorScheme.error,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            "Có lỗi xảy ra",
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: theme.colorScheme.error,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            snapshot.error.toString(),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.6),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
                   if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(child: Text("Không có thông báo nào"));
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.notifications_none_rounded,
+                            size: 64,
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.3),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            "Không có thông báo nào",
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
                   }
 
                   final notifications = snapshot.data!;
 
                   return ListView.builder(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
                     itemCount: notifications.length,
                     itemBuilder: (context, index) {
                       final notif = notifications[index];
 
-                      return GestureDetector(
-                        onTap: () {
-                          markNotificationAsRead(user, notif["id"]);
+                      return NotificationCard(
+                        id: notif["id"],
+                        title: notif["title"] ?? "Thông báo",
+                        message: notif["message"] ?? "",
+                        icon: Icons.notifications_rounded,
+                        accentColor: theme.colorScheme.primary,
+                        isRead: notif["isRead"] ?? false,
+                        createdAt: notif["timestamp"] != null
+                            ? (notif["timestamp"] as Timestamp).toDate()
+                            : DateTime.now(),
+                        onTap: () async {
+                          if (!(notif["isRead"] ?? false)) {
+                            await markNotificationAsRead(user, notif["id"]);
+                          }
                         },
-                        child: NotificationCard(
-                          id: notif["id"],
-                          title: notif["title"] ?? "Thông báo",
-                          message: notif["message"] ?? "",
-                          accentColor: Colors.blue,
-                          isRead: notif["isRead"] ?? false,
-                          createdAt: notif["timestamp"] != null
-                              ? (notif["timestamp"] as Timestamp).toDate()
-                              : DateTime.now(),
-                        ),
                       );
                     },
                   );
