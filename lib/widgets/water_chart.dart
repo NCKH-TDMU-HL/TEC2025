@@ -1,159 +1,198 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
-class WaterChart extends StatelessWidget {
+class WaterChart extends StatefulWidget {
   const WaterChart({super.key});
 
   @override
+  State<WaterChart> createState() => _WaterChartState();
+}
+
+class _WaterChartState extends State<WaterChart> {
+  List<FlSpot> _flowSpots = [];
+  List<FlSpot> _totalWaterSpots = [];
+  bool _isLoading = true;
+  String _errorMessage = '';
+
+  Future<void> _fetchTelemetry() async {
+    const url =
+        'https://thingsboard.cloud/api/v1/4HsCQd9u2238D8xpptHo/telemetry?keys=flow,totalWater';
+
+    try {
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        
+        // Lấy dữ liệu flow
+        if (data.containsKey('flow')) {
+          final flowReadings = data['flow'] as List;
+          final flowSpots = <FlSpot>[];
+
+          for (int i = 0; i < flowReadings.length; i++) {
+            final value = double.tryParse(flowReadings[i]['value'].toString()) ?? 0;
+            flowSpots.add(FlSpot(i.toDouble(), value));
+          }
+          _flowSpots = flowSpots;
+        }
+
+        // Lấy dữ liệu totalWater
+        if (data.containsKey('totalWater')) {
+          final totalWaterReadings = data['totalWater'] as List;
+          final totalWaterSpots = <FlSpot>[];
+
+          for (int i = 0; i < totalWaterReadings.length; i++) {
+            final value = double.tryParse(totalWaterReadings[i]['value'].toString()) ?? 0;
+            totalWaterSpots.add(FlSpot(i.toDouble(), value));
+          }
+          _totalWaterSpots = totalWaterSpots;
+        }
+
+        setState(() {
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _errorMessage = 'Lỗi: ${response.statusCode} - ${response.body}';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Lỗi kết nối: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchTelemetry();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_errorMessage.isNotEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 48),
+            const SizedBox(height: 16),
+            Text(_errorMessage, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _isLoading = true;
+                  _errorMessage = '';
+                });
+                _fetchTelemetry();
+              },
+              child: const Text('Thử lại'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_totalWaterSpots.isEmpty && _flowSpots.isEmpty) {
+      return const Center(child: Text('Không có dữ liệu'));
+    }
+
+    // Hiển thị biểu đồ totalWater (vì có dữ liệu)
+    final spots = _totalWaterSpots.isNotEmpty ? _totalWaterSpots : _flowSpots;
+    final title = _totalWaterSpots.isNotEmpty ? 'Tổng lượng nước (L)' : 'Lưu lượng';
+
     return Container(
-      height: 250,
+      height: 300,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(alpha: 0.2),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 5,
-            offset: const Offset(0, 2),
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: LineChart(
-        LineChartData(
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            horizontalInterval: 10,
-            getDrawingHorizontalLine: (value) {
-              return FlLine(
-                color: Colors.grey[300]!,
-                strokeWidth: 1,
-              );
-            },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          titlesData: FlTitlesData(
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 30,
-                interval: 2,
-                getTitlesWidget: (double value, TitleMeta meta) {
-                  return SideTitleWidget(
-                    axisSide: meta.axisSide,
-                    child: Text(
-                      '${value.toInt()}',
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: LineChart(
+              LineChartData(
+                gridData: FlGridData(show: true),
+                borderData: FlBorderData(
+                  show: true,
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                titlesData: FlTitlesData(
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 50,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          value.toStringAsFixed(1),
+                          style: const TextStyle(fontSize: 10),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
-            ),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                interval: 10,
-                reservedSize: 42,
-                getTitlesWidget: (double value, TitleMeta meta) {
-                  return Text(
-                    '${value.toInt()}',
-                    style: const TextStyle(
-                      color: Colors.grey,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 30,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          value.toInt().toString(),
+                          style: const TextStyle(fontSize: 10),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
-            ),
-            topTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-            rightTitles: AxisTitles(
-              sideTitles: SideTitles(showTitles: false),
-            ),
-          ),
-          borderData: FlBorderData(
-            show: true,
-            border: Border.all(color: Colors.grey[300]!),
-          ),
-          lineBarsData: [
-            LineChartBarData(
-              spots: [
-                FlSpot(1, 85.2),
-                FlSpot(2, 92.1),
-                FlSpot(3, 78.5),
-                FlSpot(4, 95.3),
-                FlSpot(5, 88.7),
-                FlSpot(6, 91.2),
-                FlSpot(7, 87.9),
-                FlSpot(8, 93.4),
-                FlSpot(9, 89.1),
-                FlSpot(10, 86.8),
-                FlSpot(11, 94.2),
-                FlSpot(12, 90.5),
-              ],
-              isCurved: true,
-              gradient: LinearGradient(
-                colors: [
-                  Colors.blue.shade400,
-                  Colors.cyan.shade600,
+                  ),
+                  topTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                ),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: spots,
+                    isCurved: true,
+                    barWidth: 3,
+                    color: Colors.blue,
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: Colors.blue.withValues(alpha: 0.2),
+                    ),
+                    dotData: FlDotData(show: true),
+                  ),
                 ],
               ),
-              barWidth: 3,
-              isStrokeCapRound: true,
-              dotData: FlDotData(
-                show: true,
-                getDotPainter: (spot, percent, barData, index) {
-                  return FlDotCirclePainter(
-                    radius: 4,
-                    color: Colors.cyan.shade600,
-                    strokeWidth: 2,
-                    strokeColor: Colors.white,
-                  );
-                },
-              ),
-              belowBarData: BarAreaData(
-                show: true,
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.blue.shade200.withValues(alpha: 0.3),
-                    Colors.cyan.shade100.withValues(alpha: 0.1),
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
-            ),
-          ],
-          lineTouchData: LineTouchData(
-            enabled: true,
-            touchTooltipData: LineTouchTooltipData(
-              getTooltipColor: (touchedSpot) => Colors.blue.shade700,
-              getTooltipItems: (List<LineBarSpot> touchedBarSpots) {
-                return touchedBarSpots.map((barSpot) {
-                  return LineTooltipItem(
-                    '${barSpot.y.toStringAsFixed(1)} m³',
-                    const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  );
-                }).toList();
-              },
             ),
           ),
-          minX: 1,
-          maxX: 12,
-          minY: 70,
-          maxY: 100,
-        ),
+        ],
       ),
     );
   }
